@@ -18,7 +18,7 @@ class AgentState(TypedDict):
     # Control fields
     error: Optional[str]     # Stores error message if something fails
     retry_count: int         # Tracks how many times we've retried
-    steps: int               # Total steps taken — circuit breaker uses this
+    steps: int               # Total steps taken — circuit breaker uses this.
 
 
 def get_initial_state(issue_url: str) -> AgentState:
