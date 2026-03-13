@@ -59,7 +59,7 @@ def clean_llm_output(text: str) -> str:
 
 def fetch_issue_details(issue_url: str) -> dict:
     """
-    Takes a GitHub issue URL like:
+    takes a GitHub issue URL like:
     https://github.com/username/reponame/issues/42
 
     Returns a dict with the issue number, title, and body.
