@@ -18,7 +18,7 @@ def get_logger(name: str) -> logging.Logger:
     handler = logging.StreamHandler(sys.stdout)
     handler.setLevel(logging.INFO)
 
-    # Format: [2026-03-13 14:32:01] code_reader - INFO - Fetching issue...
+    # Format: [2026-03-13 14:32:01] code_reader - INFO - Fetching issue
     formatter = logging.Formatter(
         '[%(asctime)s] %(name)s - %(levelname)s - %(message)s',
         datefmt='%Y-%m-%d %H:%M:%S'
