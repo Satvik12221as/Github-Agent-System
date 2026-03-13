@@ -71,7 +71,7 @@ def fetch_issue_details(issue_url: str) -> dict:
     parts = issue_url.strip("/").split("/")
     owner = parts[-4]     # e.g. "username"
     repo_name = parts[-3] # e.g. "reponame"
-    issue_number = int(parts[-1])  # e.g. 42
+    issue_number = int(parts[-1])  # e.g. 42.
 
     # Connect to GitHub and get the repo
     github = get_github_client()
