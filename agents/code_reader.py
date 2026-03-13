@@ -96,7 +96,7 @@ def get_relevant_files(issue_title: str, issue_body: str, repo) -> list[str]:
     Asks Gemini: given this issue, which files in the repo are likely relevant?
     Returns a list of file paths like ["src/auth.py", "utils/helpers.py"]
 
-    This is RAG-lite reasoning — instead of reading every file,
+    This is RAG-lite reasoning - instead of reading every file,
     we ask the LLM to filter first. Smart and cheap.
     """
     logger.info("Asking LLM to identify relevant files...")
