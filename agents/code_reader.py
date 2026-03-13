@@ -31,7 +31,7 @@ def get_llm():
 def get_github_client():
     """
     Creates and returns an authenticated GitHub client.
-    PyGithub uses our token to make authenticated requests.
+    PyGithub uses our token to make authenticated requests
     """
     token = os.getenv("GITHUB_TOKEN")
     return Github(token)
