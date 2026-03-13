@@ -105,6 +105,23 @@ def get_relevant_files(issue_title: str, issue_body: str, repo) -> list[str]:
     all_files = []
     contents = repo.get_contents("")  # Start at root
 
+    # First ask: how complex is this issue?
+    complexity_prompt = f"""
+    Issue: {issue_title}
+    Body: {issue_body}
+
+    How many files likely need changing? Reply with just a number.
+    """
+    llm = get_llm()
+    response = llm.invoke([HumanMessage(content=complexity_prompt)])
+    
+    try:
+        estimated_files = int(response.content.strip())
+        # Cap it — never fetch more than 10
+        max_files = min(estimated_files + 2, 10)
+    except:
+        max_files = 5  # fallback to default
+
     # Walk through the repo tree
     while contents:
         file_content = contents.pop(0)
@@ -131,7 +148,7 @@ REPOSITORY FILES:
 {chr(10).join(all_files)}
 
 Based on the issue description, which files are MOST LIKELY to need changes?
-Return ONLY a JSON array of file paths. Maximum 5 files.
+Return ONLY a JSON array of file paths. Maximum {max_files} files.
 Example: ["src/auth.py", "utils/helpers.py"]
 
 Return ONLY the JSON array, no explanation, no markdown.
