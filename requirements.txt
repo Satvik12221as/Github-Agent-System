@@ -1,0 +1,17 @@
+# LangGraph + LangChain core
+langgraph==0.2.28
+langchain==0.3.7
+langchain-core==0.3.15
+langchain-google-genai==2.1.4
+
+# GitHub API
+PyGithub==2.4.0
+
+# Docker (for sandbox)
+docker==7.1.0
+
+# Environment variables
+python-dotenv==1.0.1
+
+# Testing
+pytest==8.3.3
