@@ -1,4 +1,3 @@
-# agents/placeholders.py
 
 from state import AgentState
 from utils.logger import get_logger
