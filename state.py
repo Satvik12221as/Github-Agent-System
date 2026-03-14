@@ -21,3 +21,20 @@ class AgentState(TypedDict):
     steps: int               # Total steps taken — circuit breaker uses this.
 
 
+def get_initial_state(issue_url: str) -> AgentState:
+    """Factory function — creates a clean starting state for any run."""
+    return AgentState(
+        issue_url=issue_url,
+        issue_title="",
+        issue_body="",
+        code_context={},
+        plan="",
+        complexity="simple",
+        patch="",
+        tests="",
+        test_result="",
+        pr_url="",
+        error=None,
+        retry_count=0,
+        steps=0,
+    )
