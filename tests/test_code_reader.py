@@ -1,6 +1,5 @@
-# tests/test_code_reader.py
-
 import pytest
+from state import validate_github_url
 from unittest.mock import MagicMock, patch
 from state import get_initial_state
 from agents.code_reader import (
@@ -32,3 +31,23 @@ def test_initial_state_structure():
     assert state["steps"] == 0
     assert state["code_context"] == {}
     assert state["error"] is None
+
+def test_valid_github_url():
+    """Valid URL should pass validation."""
+    url = "https://github.com/user/repo/issues/42"
+    assert validate_github_url(url) == True
+
+def test_invalid_github_url_no_issue_number():
+    """URL without issue number should fail."""
+    url = "https://github.com/user/repo"
+    assert validate_github_url(url) == False
+
+def test_invalid_github_url_random_string():
+    """Random string should fail validation."""
+    url = "not-a-url-at-all"
+    assert validate_github_url(url) == False
+
+def test_get_initial_state_raises_on_invalid_url():
+    """get_initial_state() should raise ValueError on bad URL."""
+    with pytest.raises(ValueError):
+        get_initial_state("https://github.com/user/repo")

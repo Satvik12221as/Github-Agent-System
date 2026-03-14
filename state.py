@@ -1,4 +1,5 @@
 from typing import TypedDict, Optional
+import re
 
 class AgentState(TypedDict):
     # Input
@@ -21,8 +22,22 @@ class AgentState(TypedDict):
     steps: int               # Total steps taken — circuit breaker uses this.
 
 
+
+def validate_github_url(url: str) -> bool:
+    """
+    Checks if the URL looks like a real GitHub issue URL.
+    Pattern: https://github.com/owner/repo/issues/number
+    """
+    pattern = r"https://github\.com/[\w.-]+/[\w.-]+/issues/\d+"
+    return bool(re.match(pattern, url))
+
 def get_initial_state(issue_url: str) -> AgentState:
     """Factory function — creates a clean starting state for any run."""
+    if not validate_github_url(issue_url):
+        raise ValueError(
+            f"Invalid GitHub issue URL: {issue_url}\n"
+            f"Expected format: https://github.com/owner/repo/issues/42"
+        )
     return AgentState(
         issue_url=issue_url,
         issue_title="",
