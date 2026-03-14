@@ -6,7 +6,7 @@ class AgentState(TypedDict):
     issue_title: str         # Title of the issue
     issue_body: str          # Full description of the issue
 
-    # Agent outputs — filled in one by one as agents run
+    # Agent outputs - filled in one by one as agents run
     code_context: dict       # Files the Code Reader found relevant
     plan: str                # The fix plan from Planner agent
     complexity: str          # 'simple' or 'complex' — controls routing
