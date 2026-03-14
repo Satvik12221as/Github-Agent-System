@@ -1,5 +1,3 @@
-
-
 import pytest
 from unittest.mock import MagicMock, patch
 from state import get_initial_state
