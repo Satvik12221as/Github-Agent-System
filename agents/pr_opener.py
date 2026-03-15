@@ -2,7 +2,7 @@
 
 import os
 import re
-from github import Github
+from github import Github , Auth
 from github import GithubException
 from dotenv import load_dotenv
 
@@ -16,7 +16,8 @@ logger = get_logger(__name__)
 def get_github_client():
     """Creates authenticated GitHub client."""
     token = os.getenv("GITHUB_TOKEN")
-    return Github(token)
+    auth = Auth.Token(token)
+    return Github(auth=auth)
 
 
 def parse_issue_url(issue_url: str) -> dict:

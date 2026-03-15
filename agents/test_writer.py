@@ -1,8 +1,6 @@
-# agents/test_writer.py
-
 import os
 import json
-from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_anthropic import ChatAnthropic
 from langchain_core.messages import HumanMessage
 from dotenv import load_dotenv
 
@@ -15,9 +13,9 @@ logger = get_logger(__name__)
 
 
 def get_llm():
-    return ChatGoogleGenerativeAI(
-        model="gemini-1.5-flash",
-        google_api_key=os.getenv("GOOGLE_API_KEY"),
+    return ChatAnthropic(
+        model="claude-sonnet-4-5",
+        anthropic_api_key=os.getenv("ANTHROPIC_API_KEY"),
         temperature=0.1
     )
 

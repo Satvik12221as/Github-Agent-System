@@ -4,10 +4,9 @@ from utils.logger import get_logger
 
 logger = get_logger(__name__)
 
-# Approximate cost per 1000 tokens in USD
-# gemini-1.5-flash pricing as of 2026
-COST_PER_1000_INPUT_TOKENS  = 0.000075   # $0.075 per 1M tokens
-COST_PER_1000_OUTPUT_TOKENS = 0.000300   # $0.30 per 1M tokens
+# Claude Sonnet 4.5 pricing
+COST_PER_1000_INPUT_TOKENS  = 0.003    # $3 per 1M tokens
+COST_PER_1000_OUTPUT_TOKENS = 0.015    # $15 per 1M tokens
 
 
 class CostTracker:
