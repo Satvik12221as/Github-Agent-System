@@ -5,10 +5,8 @@ from state import AgentState
 from agents.code_reader import code_reader_agent
 from agents.planner import planner_agent
 from agents.code_writer import code_writer_agent
-from agents.placeholder import (
-    test_writer_agent,
-    pr_opener_agent
-)
+from agents.test_writer import run_test_writer as test_writer_agent
+from agents.placeholder import pr_opener_agent
 from utils.logger import get_logger
 
 load_dotenv()
