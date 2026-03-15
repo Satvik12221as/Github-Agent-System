@@ -1,0 +1,332 @@
+# agents/pr_opener.py
+
+import os
+import re
+from github import Github
+from github import GithubException
+from dotenv import load_dotenv
+
+from state import AgentState
+from utils.logger import get_logger
+
+load_dotenv()
+logger = get_logger(__name__)
+
+
+def get_github_client():
+    """Creates authenticated GitHub client."""
+    token = os.getenv("GITHUB_TOKEN")
+    return Github(token)
+
+
+def parse_issue_url(issue_url: str) -> dict:
+    """
+    Extracts owner, repo name, and issue number from URL.
+    https://github.com/owner/repo/issues/42
+    returns {"owner": "owner", "repo": "repo", "number": 42}
+    """
+    parts = issue_url.strip("/").split("/")
+    return {
+        "owner":  parts[-4],
+        "repo":   parts[-3],
+        "number": int(parts[-1])
+    }
+
+
+def parse_patch(patch: str) -> list[dict]:
+    """
+    Parses a unified diff patch into a list of file changes.
+    Each change has:
+      - filename: which file to modify
+      - hunks: list of changes to apply
+
+    Returns list of dicts:
+    [
+        {
+            "filename": "button.py",
+            "hunks": [
+                {
+                    "old_start": 10,
+                    "new_lines": ["def render():", "    onclick = 'handleClick()'"]
+                }
+            ]
+        }
+    ]
+    """
+    changes = []
+    current_file = None
+    current_hunks = []
+
+    lines = patch.split("\n")
+    i = 0
+
+    while i < len(lines):
+        line = lines[i]
+
+        # New file being modified
+        if line.startswith("--- a/"):
+            # Save previous file if exists
+            if current_file:
+                changes.append({
+                    "filename": current_file,
+                    "hunks": current_hunks
+                })
+
+            # Extract filename — remove "--- a/" prefix
+            current_file = line[6:]
+            current_hunks = []
+
+        # Hunk header — @@ -10,3 +10,5 @@
+        elif line.startswith("@@"):
+            # Parse the hunk header to get line numbers
+            # Format: @@ -old_start,old_count +new_start,new_count @@
+            match = re.search(r"\+(\d+)", line)
+            if match:
+                new_start = int(match.group(1))
+                current_hunks.append({
+                    "new_start": new_start,
+                    "lines": []
+                })
+
+        # Content lines
+        elif current_hunks:
+            if line.startswith("+") and not line.startswith("+++"):
+                # Added line — include without the + prefix
+                current_hunks[-1]["lines"].append(
+                    ("add", line[1:])
+                )
+            elif line.startswith("-") and not line.startswith("---"):
+                # Removed line — mark for removal
+                current_hunks[-1]["lines"].append(
+                    ("remove", line[1:])
+                )
+            else:
+                # Context line — keep as is
+                current_hunks[-1]["lines"].append(
+                    ("keep", line[1:] if line.startswith(" ") else line)
+                )
+
+        i += 1
+
+    # Save last file
+    if current_file:
+        changes.append({
+            "filename": current_file,
+            "hunks": current_hunks
+        })
+
+    return changes
+
+
+def apply_patch_to_content(
+    original_content: str,
+    hunks: list
+) -> str:
+    """
+    Applies parsed hunks to the original file content.
+    Returns the modified file content as a string.
+
+    This is a simple line-by-line patch application.
+    It reads the original lines and applies additions
+    and removals from the hunks.
+    """
+    if not hunks:
+        return original_content
+
+    original_lines = original_content.split("\n")
+    result_lines = []
+    original_index = 0
+
+    for hunk in hunks:
+        new_start = hunk["new_start"] - 1  # convert to 0-indexed
+
+        # Copy lines before this hunk unchanged
+        while original_index < new_start:
+            if original_index < len(original_lines):
+                result_lines.append(original_lines[original_index])
+            original_index += 1
+
+        # Apply the hunk
+        for action, content in hunk["lines"]:
+            if action == "add":
+                result_lines.append(content)
+            elif action == "remove":
+                original_index += 1  # skip this line
+            elif action == "keep":
+                result_lines.append(content)
+                original_index += 1
+
+    # Copy any remaining lines after the last hunk
+    while original_index < len(original_lines):
+        result_lines.append(original_lines[original_index])
+        original_index += 1
+
+    return "\n".join(result_lines)
+
+
+def create_pr_description(state: AgentState) -> str:
+    """
+    Builds a detailed PR description from state.
+    This is what reviewers see when they open the PR.
+    """
+    test_emoji = "✅" if state["test_result"] == "passed" else "❌"
+
+    description = f"""## Automated Fix
+
+This pull request was automatically generated by the GitHub Agent System.
+
+### Issue
+Fixes #{state.get('issue_url', '').split('/')[-1]}
+
+### Summary
+{state.get('plan', 'No plan available')}
+
+### Test Results
+{test_emoji} Tests {state['test_result']}
+
+### Complexity
+{state.get('complexity', 'unknown').capitalize()}
+
+### Patch Applied
+```diff
+{state.get('patch', 'No patch available')}
+```
+
+---
+*This PR was created automatically. Please review carefully before merging.*
+"""
+    return description
+
+
+def open_pull_request_agent(state: AgentState) -> AgentState:
+    """
+    THE MAIN AGENT FUNCTION.
+    Reads:  issue_url, issue_title, plan, patch, test_result
+    Writes: pr_url
+    """
+    logger.info("=== PR Opener Agent starting ===")
+
+    state["steps"] += 1
+
+    # Check we have a patch
+    if not state.get("patch"):
+        error_msg = "PR Opener failed: no patch found in state"
+        logger.error(error_msg)
+        state["error"] = error_msg
+        return state
+
+    try:
+        # Parse the issue URL
+        issue_info = parse_issue_url(state["issue_url"])
+        owner = issue_info["owner"]
+        repo_name = issue_info["repo"]
+        issue_number = issue_info["number"]
+
+        logger.info(
+            f"Opening PR for {owner}/{repo_name} issue #{issue_number}"
+        )
+
+        # Connect to GitHub
+        github = get_github_client()
+        repo = github.get_repo(f"{owner}/{repo_name}")
+
+        # Get the default branch (usually main or master)
+        default_branch = repo.default_branch
+        logger.info(f"Default branch: {default_branch}")
+
+        # Get the SHA of the latest commit on default branch
+        # We need this to create a new branch from it
+        ref = repo.get_git_ref(f"heads/{default_branch}")
+        latest_sha = ref.object.sha
+        logger.info(f"Latest commit SHA: {latest_sha[:8]}...")
+
+        # Create a new branch for our fix
+        branch_name = f"fix/issue-{issue_number}-automated"
+        logger.info(f"Creating branch: {branch_name}")
+
+        try:
+            repo.create_git_ref(
+                ref=f"refs/heads/{branch_name}",
+                sha=latest_sha
+            )
+            logger.info(f"Branch created: {branch_name}")
+        except GithubException as e:
+            if e.status == 422:
+                # Branch already exists — use it
+                logger.warning(
+                    f"Branch {branch_name} already exists. Using it."
+                )
+            else:
+                raise
+
+        # Parse the patch to get file changes
+        logger.info("Parsing patch...")
+        file_changes = parse_patch(state["patch"])
+        logger.info(f"Patch affects {len(file_changes)} files")
+
+        # Apply changes to each file
+        for change in file_changes:
+            filename = change["filename"]
+            logger.info(f"Applying changes to: {filename}")
+
+            try:
+                # Get current file content from GitHub
+                file_obj = repo.get_contents(
+                    filename,
+                    ref=branch_name
+                )
+                original_content = file_obj.decoded_content.decode(
+                    "utf-8"
+                )
+                current_sha = file_obj.sha
+
+                # Apply the patch
+                new_content = apply_patch_to_content(
+                    original_content,
+                    change["hunks"]
+                )
+
+                # Commit the changes to the branch
+                repo.update_file(
+                    path=filename,
+                    message=(
+                        f"fix: automated fix for issue #{issue_number}"
+                    ),
+                    content=new_content,
+                    sha=current_sha,
+                    branch=branch_name
+                )
+
+                logger.info(f"Successfully committed: {filename}")
+
+            except GithubException as e:
+                logger.warning(
+                    f"Could not apply patch to {filename}: {e}"
+                )
+                # Continue with other files even if one fails
+                continue
+
+        # Build PR description
+        pr_description = create_pr_description(state)
+
+        # Open the pull request
+        logger.info("Opening pull request...")
+        pr = repo.create_pull(
+            title=f"fix: {state['issue_title']} (automated)",
+            body=pr_description,
+            head=branch_name,
+            base=default_branch
+        )
+
+        # Write PR URL to state
+        state["pr_url"] = pr.html_url
+        state["error"] = None
+
+        logger.info(f"Pull request opened: {pr.html_url}")
+
+    except Exception as e:
+        error_msg = f"PR Opener failed: {str(e)}"
+        logger.error(error_msg)
+        state["error"] = error_msg
+
+    return state
