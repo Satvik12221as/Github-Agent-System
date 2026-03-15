@@ -12,8 +12,24 @@ from utils.logger import get_logger
 load_dotenv()
 logger = get_logger(__name__)
 
+def check_step_limit(state: AgentState) -> str:
+    """
+    Circuit breaker — stops the pipeline if steps exceed 15.
+    Prevents infinite loops from burning API quota.
+    Called before every major agent.
+    """
+    if state.get("steps", 0) >= 15:
+        logger.warning(
+            f"Circuit breaker triggered. "
+            f"Steps={state['steps']} >= 15. Stopping."
+        )
+        state["error"] = (
+            "Circuit breaker: max steps reached"
+        )
+        return "stop"
+    return "continue"
 
-# ← TOP LEVEL — NOT inside any function
+
 def route_by_complexity(state: AgentState) -> str:
     complexity = state.get("complexity", "simple")
     logger.info(f"Routing decision: complexity = {complexity}")
