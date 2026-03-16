@@ -1,7 +1,7 @@
 import os
 import json
 from github import Github, Auth
-from langchain_anthropic import ChatAnthropic
+from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import HumanMessage
 from dotenv import load_dotenv
 
@@ -16,11 +16,11 @@ logger = get_logger(__name__)
 
 
 def get_llm():
-    return ChatAnthropic(
-        model="claude-sonnet-4-5",
-        anthropic_api_key=os.getenv("ANTHROPIC_API_KEY"),
+    return ChatGoogleGenerativeAI(
+        model="gemini-2.0-flash",
+        google_api_key=os.getenv("GOOGLE_API_KEY"),
         temperature=0.1
-    )                      # We want precise answers, not imaginative ones
+    )                   # We want precise answers, not imaginative ones
 
 
 def get_github_client():
