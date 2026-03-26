@@ -40,17 +40,37 @@ def route_by_complexity(state: AgentState) -> str:
 
 # ← TOP LEVEL — NOT inside any function
 def route_after_tests(state: AgentState) -> str:
-    test_result = state.get("test_result", "failed")
-    retry_count = state.get("retry_count", 0)
-    logger.info(f"Test result: {test_result}, Retry count: {retry_count}")
+    test_result  = state.get("test_result", "failed")
+    retry_count  = state.get("retry_count", 0)
+    error        = state.get("error", "") or ""
+
+    logger.info(
+        f"Test result: {test_result}, "
+        f"Retry count: {retry_count}"
+    )
+
+    # Circuit breaker — max 3 retries
     if retry_count >= 3:
         logger.warning("Max retries reached. Forcing PR open.")
         return "open_pr"
+
+    # Do NOT retry on rate limit errors
+    # Retrying immediately when quota is exhausted
+    # just burns more quota and loops forever
+    if "429" in error or "rate_limit" in error.lower():
+        logger.warning(
+            "Rate limit error detected. "
+            "Skipping retry, opening PR with best effort."
+        )
+        return "open_pr"
+
     if test_result == "passed":
         return "open_pr"
     else:
         state["retry_count"] = retry_count + 1
         return "retry"
+
+
 
 
 # ← TOP LEVEL — NOT inside any function
@@ -115,6 +135,15 @@ def run_workflow(issue_url: str) -> AgentState:
     logger.info(f"Starting workflow for: {issue_url}")
     initial_state = get_initial_state(issue_url)
     app = build_workflow()
-    final_state = app.invoke(initial_state)
-    logger.info(f"Workflow complete. PR URL: {final_state.get('pr_url')}")
+
+    # Increase recursion limit for complex pipelines
+    final_state = app.invoke(
+        initial_state,
+        config={"recursion_limit": 5}
+    )
+
+    logger.info(
+        f"Workflow complete. PR URL: "
+        f"{final_state.get('pr_url')}"
+    )
     return final_state

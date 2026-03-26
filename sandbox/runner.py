@@ -141,8 +141,17 @@ fi
         # Run setup — install pytest
         logger.info("Installing pytest in container...")
         setup_result = container.exec_run(
-            "pip install pytest --quiet",
+            "pip install pytest --quiet --no-cache-dir",
             workdir="/workspace"
+        )
+
+        verify_result = container.exec_run(
+            "python -m pytest --version",
+            workdir="/workspace"
+        )
+        logger.info(
+            f"pytest verify: "
+            f"{verify_result.output.decode('utf-8').strip()}"
         )
 
         # Run the tests
