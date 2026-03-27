@@ -57,18 +57,21 @@ def route_after_tests(state: AgentState) -> str:
     # Do NOT retry on rate limit errors
     # Retrying immediately when quota is exhausted
     # just burns more quota and loops forever
-    if "429" in error or "rate_limit" in error.lower():
+    if any(word in error.lower() for word in [
+        "docker", "429", "rate_limit",
+        "no module named pytest", "createfile"
+    ]):
         logger.warning(
-            "Rate limit error detected. "
-            "Skipping retry, opening PR with best effort."
+            f"Infrastructure error detected: {error[:80]}"
+            f"\nSkipping retry. Opening PR with best effort."
         )
         return "open_pr"
 
     if test_result == "passed":
         return "open_pr"
-    else:
-        state["retry_count"] = retry_count + 1
-        return "retry"
+
+    state["retry_count"] = retry_count + 1
+    return "retry"
 
 
 
@@ -139,7 +142,7 @@ def run_workflow(issue_url: str) -> AgentState:
     # Increase recursion limit for complex pipelines
     final_state = app.invoke(
         initial_state,
-        config={"recursion_limit": 5}
+        config={"recursion_limit": 50}
     )
 
     logger.info(
