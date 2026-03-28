@@ -1,4 +1,3 @@
-
 import os
 import json
 from github import Github, Auth
@@ -132,7 +131,7 @@ def get_relevant_files(
     Then ask LLM which of those files are most relevant.
     """
 
-    # Step 1 — ask LLM what extensions to look for
+    # Step 1 — ask LLM what extensions to look for.
     extensions = get_relevant_extensions(
         issue_title,
         issue_body

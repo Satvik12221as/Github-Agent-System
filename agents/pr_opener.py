@@ -1,5 +1,3 @@
-# agents/pr_opener.py
-
 import os
 import re
 from github import Github , Auth

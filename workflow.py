@@ -49,7 +49,7 @@ def route_after_tests(state: AgentState) -> str:
         f"Retry count: {retry_count}"
     )
 
-    # Circuit breaker — max 3 retries
+    # Circuit breaker — max 3 retries.
     if retry_count >= 3:
         logger.warning("Max retries reached. Forcing PR open.")
         return "open_pr"

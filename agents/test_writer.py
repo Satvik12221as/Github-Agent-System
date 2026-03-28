@@ -65,11 +65,13 @@ Write pytest tests that verify the fix described in the plan works correctly.
 Rules:
 - Write at least 2 tests
 - Each test function must start with test_
-- Tests must be self-contained — no external dependencies
-- Do not import from the patched files directly if they have complex deps
+- Tests must be self-contained
+- DO NOT import cv2, pyaudio, tkinter or any
+  hardware-dependent library directly
+- If the code uses cv2 or cameras, mock them with
+  unittest.mock.MagicMock instead of importing directly
 - Use simple assert statements
-- Tests should verify the specific behaviour described in the plan
-- Keep tests simple and focused
+- Test the logic only, not the hardware
 
 Return ONLY the Python test code. No explanation. No markdown fences.
 """
@@ -99,6 +101,24 @@ def validate_tests(tests: str) -> bool:
     return has_test_function and has_import_or_code
 
 
+def fetch_repo_requirements(repo) -> str:
+    """
+    Tries to fetch requirements.txt from the GitHub repo.
+    Returns the contents as a string, or None if not found.
+    """
+    try:
+        file_obj = repo.get_contents("requirements.txt")
+        contents = file_obj.decoded_content.decode("utf-8")
+        logger.info(
+            f"Found requirements.txt "
+            f"({len(contents)} chars)"
+        )
+        return contents
+    except Exception:
+        logger.info("No requirements.txt found in repo")
+        return None
+
+
 def run_test_writer(state: AgentState) -> AgentState:
     """
     THE MAIN AGENT FUNCTION.
@@ -109,7 +129,7 @@ def run_test_writer(state: AgentState) -> AgentState:
 
     state["steps"] += 1
 
-    # Check we have a patch to test
+    # Check we have a patch to test.
     if not state.get("patch"):
         error_msg = "Test Writer failed: no patch found in state"
         logger.error(error_msg)
@@ -149,12 +169,35 @@ def test_basic_sanity():
         # Store tests in state
         state["tests"] = tests
 
-        # Step 2: Run tests in Docker sandbox
+        # Try to fetch requirements.txt from GitHub
+        # so Docker can install the right packages
+        repo_requirements = None
+        try:
+            from github import Github, Auth
+            import os
+            token = os.getenv("GITHUB_TOKEN")
+            auth = Auth.Token(token)
+            github = Github(auth=auth)
+
+            # Parse repo from issue URL
+            parts = state["issue_url"].strip("/").split("/")
+            owner     = parts[-4]
+            repo_name = parts[-3]
+            repo      = github.get_repo(f"{owner}/{repo_name}")
+
+            repo_requirements = fetch_repo_requirements(repo)
+        except Exception as e:
+            logger.warning(
+                f"Could not fetch requirements.txt: {e}"
+            )
+
+        # Run tests in Docker sandbox with auto dependency detection
         logger.info("Running tests in Docker sandbox...")
         result = run_tests_in_docker(
             state["code_context"],
             state["patch"],
-            state["tests"]
+            state["tests"],
+            repo_requirements=repo_requirements
         )
 
         # Step 3: Write result to state
