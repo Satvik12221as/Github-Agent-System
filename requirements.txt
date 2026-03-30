@@ -15,3 +15,7 @@ python-dotenv==1.0.1
 
 # Testing
 pytest==8.3.3
+
+# Backend
+fastapi==0.115.0
+uvicorn==0.30.0

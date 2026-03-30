@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GitFix — AI Bug Fixer</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #0d1117;
+      color: #e6edf3;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+    }
+
+    .container {
+      max-width: 640px;
+      width: 100%;
+      text-align: center;
+    }
+
+    h1 {
+      font-size: 3rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+      background: linear-gradient(135deg, #58a6ff, #3fb950);
+      background-clip: text;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .subtitle {
+      font-size: 1.1rem;
+      color: #8b949e;
+      margin-bottom: 3rem;
+    }
+
+    .card {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 12px;
+      padding: 2rem;
+      margin-bottom: 2rem;
+    }
+
+    input {
+      width: 100%;
+      padding: 0.75rem 1rem;
+      background: #0d1117;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      color: #e6edf3;
+      font-size: 0.95rem;
+      margin-bottom: 1rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    input:focus { border-color: #58a6ff; }
+
+    input::placeholder { color: #484f58; }
+
+    button {
+      width: 100%;
+      padding: 0.75rem;
+      background: #238636;
+      border: none;
+      border-radius: 8px;
+      color: white;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    button:hover { background: #2ea043; }
+    button:disabled { background: #21262d; cursor: not-allowed; }
+
+    .status {
+      margin-top: 1.5rem;
+      padding: 1rem;
+      border-radius: 8px;
+      display: none;
+      text-align: left;
+    }
+
+    .status.loading {
+      display: block;
+      background: #1c2128;
+      border: 1px solid #30363d;
+      color: #8b949e;
+    }
+
+    .status.success {
+      display: block;
+      background: #0f2d1a;
+      border: 1px solid #238636;
+      color: #3fb950;
+    }
+
+    .status.error {
+      display: block;
+      background: #2d0f0f;
+      border: 1px solid #da3633;
+      color: #f85149;
+    }
+
+    .pr-link {
+      color: #58a6ff;
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    .pr-link:hover { text-decoration: underline; }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+
+    .stat {
+      background: #0d1117;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      padding: 0.75rem;
+      text-align: center;
+    }
+
+    .stat-value {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #58a6ff;
+    }
+
+    .stat-label {
+      font-size: 0.75rem;
+      color: #8b949e;
+      margin-top: 0.25rem;
+    }
+
+    .pricing {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1rem;
+      margin-top: 2rem;
+    }
+
+    .plan {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 12px;
+      padding: 1.5rem;
+      text-align: left;
+    }
+
+    .plan.featured {
+      border-color: #58a6ff;
+    }
+
+    .plan-name {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+    }
+
+    .plan-price {
+      font-size: 2rem;
+      font-weight: 700;
+      color: #58a6ff;
+      margin-bottom: 1rem;
+    }
+
+    .plan-price span {
+      font-size: 0.9rem;
+      color: #8b949e;
+    }
+
+    .plan-feature {
+      font-size: 0.85rem;
+      color: #8b949e;
+      margin-bottom: 0.4rem;
+      padding-left: 1rem;
+      position: relative;
+    }
+
+    .plan-feature::before {
+      content: "✓";
+      position: absolute;
+      left: 0;
+      color: #3fb950;
+    }
+
+    .spinner {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid #30363d;
+      border-top-color: #58a6ff;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin-right: 8px;
+      vertical-align: middle;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <div class="container">
+
+    <h1>GitFix</h1>
+    <p class="subtitle">
+      Paste a GitHub issue. Get a pull request. Powered by AI.
+    </p>
+
+    <div class="card">
+      <input
+        type="text"
+        id="issue-url"
+        placeholder="https://github.com/owner/repo/issues/42"
+      />
+      <button id="fix-btn" onclick="fixIssue()">
+        Fix This Issue →
+      </button>
+
+      <div class="status" id="status"></div>
+    </div>
+
+    <div class="stats">
+      <div class="stat">
+        <div class="stat-value">75s</div>
+        <div class="stat-label">Average fix time</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value">5</div>
+        <div class="stat-label">AI agents working</div>
+      </div>
+      <div class="stat">
+        <div class="stat-value">100%</div>
+        <div class="stat-label">Autonomous</div>
+      </div>
+    </div>
+
+    <div class="pricing">
+      <div class="plan">
+        <div class="plan-name">Pay per fix</div>
+        <div class="plan-price">$2 <span>/ fix</span></div>
+        <div class="plan-feature">One GitHub issue fixed</div>
+        <div class="plan-feature">Pull request opened</div>
+        <div class="plan-feature">No subscription</div>
+      </div>
+      <div class="plan featured">
+        <div class="plan-name">Pro</div>
+        <div class="plan-price">$29 <span>/ month</span></div>
+        <div class="plan-feature">50 fixes per month</div>
+        <div class="plan-feature">Priority queue</div>
+        <div class="plan-feature">Private repos</div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    const API_URL = "http://localhost:8000";
+
+    async function fixIssue() {
+      const url   = document.getElementById("issue-url").value.trim();
+      const btn   = document.getElementById("fix-btn");
+      const status = document.getElementById("status");
+
+      if (!url) {
+        showStatus("error", "Please enter a GitHub issue URL");
+        return;
+      }
+
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span> Fixing issue...';
+
+      showStatus(
+        "loading",
+        "Pipeline running — reading code, planning fix, writing patch..."
+      );
+
+      try {
+        const response = await fetch(`${API_URL}/fix`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ issue_url: url })
+        });
+
+        const data = await response.json();
+
+        if (data.pr_url) {
+          showStatus("success", `
+            <strong>Fix complete!</strong><br><br>
+            Issue: ${data.issue_title}<br>
+            Complexity: ${data.complexity}<br>
+            Steps: ${data.steps} agents ran<br><br>
+            <a class="pr-link"
+               href="${data.pr_url}"
+               target="_blank">
+              View Pull Request →
+            </a>
+          `);
+        } else {
+          showStatus(
+            "error",
+            `Pipeline ran but no PR created. ${data.error || ""}`
+          );
+        }
+
+      } catch (err) {
+        showStatus(
+          "error",
+          "Could not connect to the API. Make sure the server is running."
+        );
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = "Fix This Issue →";
+      }
+    }
+
+    function showStatus(type, message) {
+      const status = document.getElementById("status");
+      status.className = `status ${type}`;
+      status.innerHTML = message;
+    }
+
+    document.getElementById("issue-url")
+      .addEventListener("keypress", e => {
+        if (e.key === "Enter") fixIssue();
+      });
+  </script>
+</body>
+</html>
