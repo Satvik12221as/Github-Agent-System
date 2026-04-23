@@ -21,6 +21,10 @@ class AgentState(TypedDict):
     retry_count: int         # Tracks how many times we've retried
     steps: int               # Total steps taken — circuit breaker uses this.
 
+    patch_confidence:      str    # high/medium/low from review
+    last_review_feedback:  str    # feedback for retry prompt
+
+
 
 
 def validate_github_url(url: str) -> bool:
@@ -52,4 +56,6 @@ def get_initial_state(issue_url: str) -> AgentState:
         error=None,
         retry_count=0,
         steps=0,
+        patch_confidence="",
+        last_review_feedback="",
     )
