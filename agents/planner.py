@@ -34,43 +34,74 @@ def clean_llm_output(text: str) -> str:
 
 def build_plan(issue_title: str, issue_body: str, code_context: dict) -> dict:
     """
-    Sends the issue + relevant code to Gemini.
-    Asks for a structured JSON plan back.
-    Returns a dict with: summary, steps, affected_files, complexity
+    Deep root cause analysis.
+    Does not just describe what to fix — identifies WHY the bug exists
+    at the code level and produces a precise surgical fix plan.
     """
-    logger.info("Building fix plan with Gemini...")
+    logger.info("Performing deep root cause analysis...")
 
-    # Format the code context for the prompt
-    # We turn the dict into readable text: filename + contents
+    # Format code with line numbers so LLM can reference specific lines
     formatted_code = ""
     for filename, content in code_context.items():
-        formatted_code += f"\n--- {filename} ---\n{content}\n"
+        formatted_code += f"\n{'='*60}\n"
+        formatted_code += f"FILE: {filename}\n"
+        formatted_code += f"{'='*60}\n"
+        lines = content.split("\n")
+        for i, line in enumerate(lines, 1):
+            formatted_code += f"{i:4d} | {line}\n"
 
     prompt = f"""
-You are a senior software engineer.
-Analyze this GitHub issue and the relevant code, then produce a fix plan.
+You are a principal software engineer doing a deep root cause analysis.
+Your job is NOT to describe the symptom. Your job is to find exactly
+WHY the bug exists in the code and HOW to fix it permanently.
 
 ISSUE TITLE: {issue_title}
 
-ISSUE BODY: {issue_body}
+ISSUE DESCRIPTION: {issue_body}
 
-RELEVANT CODE:
+CODEBASE:
 {formatted_code}
 
-Produce a JSON response with exactly these fields:
+Perform a deep root cause analysis:
+
+1. Read every line of the code carefully
+2. Find the EXACT line or lines causing the bug
+3. Understand WHY those lines cause the bug
+4. Design a fix that addresses the root cause permanently
+5. Consider edge cases the fix must handle
+
+Return ONLY this JSON object:
+
 {{
-  "summary": "one sentence describing what needs to be fixed",
-  "steps": ["step 1", "step 2", "step 3"],
-  "affected_files": ["file1.py", "file2.py"],
-  "complexity": "simple" or "complex",
-  "risk": "low" or "medium" or "high"
+    "root_cause": "exact technical explanation of WHY the bug exists — reference specific line numbers and variable names from the code",
+    "bug_location": {{
+        "file": "exact filename",
+        "lines": "line range like 42-48",
+        "code_snippet": "the exact buggy code"
+    }},
+    "why_it_fails": "step by step explanation of the failure chain — what happens at runtime that causes the symptom",
+    "fix_approach": "the precise technical fix — what exactly changes and why this permanently solves the root cause",
+    "steps": [
+        "specific step referencing exact function/variable names",
+        "specific step referencing exact function/variable names"
+    ],
+    "affected_files": ["file1.py"],
+    "edge_cases": [
+        "edge case this fix must handle",
+        "another edge case"
+    ],
+    "risk": "low" or "medium" or "high",
+    "risk_reason": "why this risk level — what could go wrong"
 }}
 
-Complexity rules:
-- "simple" = fix is in 1-2 files, straightforward change, low risk
-- "complex" = fix spans 3+ files, needs refactoring, or touches critical logic
+Rules:
+- root_cause must reference specific line numbers from the code above
+- fix_approach must be technically precise — not vague
+- steps must reference actual function names, variable names, class names from the code
+- Never write generic steps like "fix the bug" or "update the code"
+- Every step must be something a developer can implement directly
 
-Return ONLY the JSON object. No explanation. No markdown.
+Return ONLY the JSON. No explanation. No markdown.
 """
 
     llm = get_llm()
@@ -79,36 +110,38 @@ Return ONLY the JSON object. No explanation. No markdown.
 
     try:
         plan = json.loads(raw)
-        logger.info(f"Plan built. Complexity: {plan.get('complexity')}")
-        logger.info(f"Summary: {plan.get('summary')}")
+
+        logger.info(f"Root cause: {plan.get('root_cause')}")
+        logger.info(f"Bug location: {plan.get('bug_location')}")
+        logger.info(f"Fix approach: {plan.get('fix_approach')}")
+        logger.info(f"Risk: {plan.get('risk')} — {plan.get('risk_reason')}")
+
         return plan
 
     except json.JSONDecodeError:
         logger.error(f"Could not parse plan JSON: {raw}")
-        # Return a safe fallback plan so the system keeps running
         return {
-            "summary": "Fix the reported issue",
-            "steps": ["Investigate the issue", "Apply fix", "Test fix"],
+            "root_cause":   "Could not determine root cause",
+            "bug_location": {
+                "file":         list(code_context.keys())[0] if code_context else "",
+                "lines":        "unknown",
+                "code_snippet": ""
+            },
+            "why_it_fails":  "Unknown",
+            "fix_approach":  "Investigate and fix the reported issue",
+            "steps":         ["Investigate the root cause", "Apply targeted fix", "Test edge cases"],
             "affected_files": list(code_context.keys()),
-            "complexity": "simple",
-            "risk": "low"
+            "edge_cases":    [],
+            "risk":          "medium",
+            "risk_reason":   "Unknown root cause"
         }
 
-
 def planner_agent(state: AgentState) -> AgentState:
-    """
-    THE MAIN AGENT FUNCTION.
-    Reads: issue_title, issue_body, code_context
-    Writes: plan, complexity
-    """
     logger.info("=== Planner Agent starting ===")
-
     state["steps"] += 1
 
-    # Safety check — if code_reader failed and context is empty
-    # we still try to plan from just the issue description
-    if not state["code_context"]:
-        logger.warning("No code context found. Planning from issue only.")
+    if not state.get("code_context"):
+        logger.warning("No code context. Planning from issue only.")
 
     try:
         plan_data = build_plan(
@@ -117,21 +150,51 @@ def planner_agent(state: AgentState) -> AgentState:
             state["code_context"]
         )
 
-        # Write the human readable plan as a formatted string into state
-        # This is what Code Writer will read
+        # Format into a rich plan string that Code Writer reads
+        # Include root cause so Code Writer knows exactly what to fix
+        edge_cases_text = "\n".join([
+            f"  - {ec}"
+            for ec in plan_data.get("edge_cases", [])
+        ]) or "  - None identified"
+
+        bug_location = plan_data.get("bug_location", {})
+
         state["plan"] = f"""
-SUMMARY: {plan_data['summary']}
+ROOT CAUSE:
+{plan_data.get('root_cause', 'Unknown')}
+
+BUG LOCATION:
+  File:    {bug_location.get('file', 'unknown')}
+  Lines:   {bug_location.get('lines', 'unknown')}
+  Code:    {bug_location.get('code_snippet', 'unknown')}
+
+WHY IT FAILS:
+{plan_data.get('why_it_fails', 'Unknown')}
+
+FIX APPROACH:
+{plan_data.get('fix_approach', 'Unknown')}
 
 STEPS TO FIX:
-{chr(10).join(f"  {i+1}. {step}" for i, step in enumerate(plan_data['steps']))}
+{chr(10).join(f"  {i+1}. {step}" for i, step in enumerate(plan_data.get("steps", [])))}
 
-AFFECTED FILES: {', '.join(plan_data['affected_files'])}
+EDGE CASES TO HANDLE:
+{edge_cases_text}
 
-RISK LEVEL: {plan_data['risk']}
+AFFECTED FILES: {', '.join(plan_data.get('affected_files', []))}
+
+RISK: {plan_data.get('risk', 'unknown')} — {plan_data.get('risk_reason', '')}
 """.strip()
 
-        # Write complexity separately — orchestrator reads this for routing
-        state["complexity"] = plan_data.get("complexity", "simple")
+        # Complexity is now derived from risk and affected files
+        # not just a simple label
+        affected_count = len(plan_data.get("affected_files", []))
+        risk           = plan_data.get("risk", "low")
+
+        if affected_count >= 3 or risk == "high":
+            state["complexity"] = "complex"
+        else:
+            state["complexity"] = "simple"
+
         state["error"] = None
 
         logger.info(f"Planner complete. Complexity={state['complexity']}")
@@ -140,8 +203,7 @@ RISK LEVEL: {plan_data['risk']}
     except Exception as e:
         error_msg = f"Planner failed: {str(e)}"
         logger.error(error_msg)
-        state["error"] = error_msg
-        # Default to simple so the system can still attempt to continue
+        state["error"]      = error_msg
         state["complexity"] = "simple"
 
     return state
