@@ -169,9 +169,9 @@ def get_relevant_files(
     if not matching_files:
         logger.warning(
             "No files found with suggested extensions. "
-            "Falling back to .py and .js"
+            "Falling back to .py and .js and .ts and .html"
         )
-        extensions_tuple = (".py", ".js")
+        extensions_tuple = (".py", ".js", ".ts", ".html")
         contents = repo.get_contents("")
         while contents:
             item = contents.pop(0)
