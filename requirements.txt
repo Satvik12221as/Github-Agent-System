@@ -7,7 +7,7 @@ langchain-groq==0.2.0
 # GitHub API
 PyGithub==2.4.0
 
-# Docker (for sandbox)
+# Docker
 docker==7.1.0
 
 # Environment variables
@@ -19,3 +19,6 @@ pytest==8.3.3
 # Backend
 fastapi==0.115.0
 uvicorn==0.30.0
+
+#LLM
+langchain-google-genai==2.1.4

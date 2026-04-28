@@ -2,8 +2,12 @@ import os
 import json
 import re
 from langchain_groq import ChatGroq
+from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import HumanMessage
 from dotenv import load_dotenv
+import ast
+import tempfile
+import os
 
 from state import AgentState
 from utils.logger import get_logger
@@ -19,6 +23,17 @@ def get_llm():
         temperature=0.1
     )
 
+def get_reviewer_llm():
+    """
+    Reviewer LLM — used for patch REVIEW only.
+    Different model = independent perspective.
+    Gemini catches what LLaMA misses and vice versa.
+    """
+    return ChatGoogleGenerativeAI(
+        model="gemini-2.0-flash",
+        google_api_key=os.getenv("GOOGLE_API_KEY"),
+        temperature=0.0   # zero temp for deterministic reviews
+    )    
 
 
 def clean_llm_output(text: str) -> str:
@@ -152,23 +167,35 @@ Return ONLY the unified diff patch. No explanation. No markdown fences.
 
     return patch
 
+
 def review_patch(
     plan: str,
     patch: str,
     code_context: dict
 ) -> dict:
     """
-    Asks the LLM to review the generated patch.
-    Returns a dict with approved (bool) and feedback (str).
+    Independent patch review using a DIFFERENT model
+    than the one that generated the patch.
+
+    Generator: Groq LLaMA 3.3 70B
+    Reviewer:  Gemini 2.0 Flash
+
+    Different training data, different architecture,
+    different blind spots. Real independent review.
     """
-    logger.info("Reviewing patch with LLM...")
+    logger.info(
+        "Reviewing patch with independent model (Gemini)..."
+    )
 
     formatted_code = ""
     for filename, content in code_context.items():
         formatted_code += f"\n--- {filename} ---\n{content}\n"
 
     prompt = f"""
-You are a senior software engineer doing a code review.
+You are a senior software engineer doing an independent code review.
+A different AI model generated this patch. Your job is to find its mistakes.
+
+Be strict. Be skeptical. Do not approve bad code.
 
 ORIGINAL FIX PLAN:
 {plan}
@@ -179,40 +206,58 @@ GENERATED PATCH:
 ORIGINAL CODE:
 {formatted_code}
 
-Review this patch carefully and answer:
+Review this patch and answer these questions:
 
 1. Does the patch actually implement what the plan describes?
-2. Are there any syntax errors in the changed lines?
-3. Are there any obvious logic errors?
-4. Does the patch break any existing functionality?
-5. Is the patch complete or does it miss something?
+2. Are there syntax errors in the changed lines?
+3. Are there logic errors that would cause runtime failures?
+4. Does the patch handle the edge cases mentioned in the plan?
+5. Does the patch break any existing functionality?
+6. Is the patch complete or does it miss part of the fix?
+7. Are the line numbers in the patch correct for the original code?
 
 Return ONLY this JSON:
 {{
     "approved": true or false,
     "confidence": "high" or "medium" or "low",
-    "issues": ["issue 1", "issue 2"],
-    "suggestion": "one sentence on what to improve if not approved"
+    "issues": [
+        "specific issue 1 with line reference",
+        "specific issue 2 with line reference"
+    ],
+    "suggestion": "precise instruction for what to fix in next attempt"
 }}
+
+Rules:
+- approved must be false if ANY issue exists
+- issues must reference specific lines or variable names
+- suggestion must be actionable — not vague
+- If the patch is perfect, issues should be empty array
 
 Return ONLY the JSON. No explanation. No markdown.
 """
 
-    llm = get_llm()
-    response = llm.invoke([HumanMessage(content=prompt)])
+    # Use reviewer LLM 
+    reviewer = get_reviewer_llm()
+    response = reviewer.invoke([HumanMessage(content=prompt)])
     raw = clean_llm_output(response.content)
 
     try:
         review = json.loads(raw)
         logger.info(
-            f"Review result: approved={review.get('approved')} "
+            f"Review by Gemini: "
+            f"approved={review.get('approved')} "
             f"confidence={review.get('confidence')}"
         )
         if review.get("issues"):
-            logger.warning(f"Issues found: {review['issues']}")
+            for issue in review["issues"]:
+                logger.warning(f"Issue found: {issue}")
         return review
+
     except json.JSONDecodeError:
-        logger.warning("Could not parse review. Approving by default.")
+        logger.warning(
+            "Could not parse review response. "
+            "Approving with low confidence."
+        )
         return {
             "approved":   True,
             "confidence": "low",
@@ -292,11 +337,6 @@ def code_writer_agent(state: AgentState) -> AgentState:
     state["patch"] = patch
     state["error"] = "Warning: patch did not pass review"
     return state
-
-
-import ast
-import tempfile
-import os
 
 
 def apply_patch_locally(
