@@ -74,7 +74,7 @@ def validate_patch(patch: str) -> bool:
     return is_valid
 
 
-# LAYER 2 — MULTI-LANGUAGE SYNTAX VALIDATION
+# LAYER 2 - MULTI-LANGUAGE SYNTAX VALIDATION
 def verify_syntax_python(content: str, filename: str) -> dict:
     """
     Validates Python syntax using ast.parse().
