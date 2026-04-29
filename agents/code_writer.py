@@ -559,7 +559,7 @@ def apply_patch_locally(
     return "\n".join(result_lines)
 
 
-# LAYER 3 — TEST EXECUTION
+# LAYER 3 - TEST EXECUTION
 def run_existing_tests(
     patch: str,
     code_context: dict
@@ -656,7 +656,7 @@ def run_existing_tests(
         }
 
 
-# LAYER 4 — LLM CODE REVIEW
+# LAYER 4 - LLM CODE REVIEW
 def review_patch(
     plan: str,
     patch: str,
