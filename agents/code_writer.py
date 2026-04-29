@@ -35,7 +35,7 @@ def clean_llm_output(text: str) -> str:
     return text.strip()
 
 
-# LAYER 1 — FORMAT VALIDATION
+# LAYER 1 - FORMAT VALIDATION
 def validate_patch(patch: str) -> bool:
     """
     Checks if the patch looks like a valid unified diff.
