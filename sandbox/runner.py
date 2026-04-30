@@ -10,7 +10,7 @@ from utils.logger import get_logger
 logger = get_logger(__name__)
 
 
-CONTAINER_TIMEOUT = 120   # seconds - increased for ML repos
+CONTAINER_TIMEOUT = 120   # seconds - increased for ML repositories with heavy dependencies
 DOCKER_IMAGE      = "python:3.11-slim"
 
 
