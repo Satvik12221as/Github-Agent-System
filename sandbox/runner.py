@@ -32,52 +32,6 @@ SKIP_PACKAGES = {
 }
 
 
-# PULL IMAGE WITH RETRY AND FALLBACK
-def ensure_image_available(client) -> str:
-    """
-    Ensures the Docker image is available locally.
-    Tries primary image first then falls back to alternatives.
-    Returns the image name that is available.
-    """
-    images_to_try = [
-        "python:3.11-slim",
-        "python:3.11",
-        "python:3-slim",
-        "python:3"
-    ]
-
-    for image_name in images_to_try:
-        # Check if image is already cached locally
-        try:
-            client.images.get(image_name)
-            logger.info(f"Using cached image: {image_name}")
-            return image_name
-        except docker.errors.ImageNotFound:
-            pass
-
-        # Try to pull with timeout
-        try:
-            logger.info(f"Pulling image: {image_name}...")
-            client.images.pull(
-                image_name,
-                timeout=60
-            )
-            logger.info(f"Pulled: {image_name}")
-            return image_name
-
-        except Exception as e:
-            logger.warning(
-                f"Could not pull {image_name}: {e}. "
-                f"Trying next option..."
-            )
-            continue
-
-    raise Exception(
-        "No Docker image available. "
-        "Run: docker pull python:3.11-slim"
-    )
-
-
 # BETTER TAR ARCHIVE
 def create_tar_archive(files: dict) -> bytes:
     """
