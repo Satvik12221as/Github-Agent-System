@@ -24,7 +24,7 @@ def get_github_client():
     return Github(auth=auth)
 
 
-# IMPROVEMENT 1 - RETRY WRAPPER FOR GITHUB API
+# RETRY WRAPPER FOR GITHUB API
 def github_api_call(func, *args, **kwargs):
     """
     Wraps any GitHub API call with retry logic.
@@ -96,7 +96,7 @@ def parse_issue_url(issue_url: str) -> dict:
     }
 
 
-# IMPROVEMENT 2 - ROBUST PATCH PARSING
+# ROBUST PATCH PARSING
 def parse_patch(patch: str) -> list[dict]:
     """
     Parses unified diff into list of file changes.
@@ -208,7 +208,7 @@ def apply_patch_to_content(
     return "\n".join(result_lines)
 
 
-# IMPROVEMENT 3 - VERIFY COMMITTED CODE (read back and confirm)
+# VERIFY COMMITTED CODE (read back and confirm)
 def verify_commit(
     repo,
     filename: str,
@@ -245,7 +245,7 @@ def verify_commit(
         return False
 
 
-# IMPROVEMENT 4 - PR DESCRIPTION (gives reviewers everything they need to review the PR)
+# PR DESCRIPTION (gives reviewers everything they need to review the PR)
 def create_pr_description(state: AgentState) -> str:
     """
     Builds a comprehensive PR description from state.
@@ -328,7 +328,7 @@ Before merging please verify:
     return description
 
 
-# IMPROVEMENT 5 - ATOMIC COMMIT STRATEGY (prepare all file changes before committing ANY)
+# ATOMIC COMMIT STRATEGY (prepare all file changes before committing ANY)
 def prepare_all_changes(
     repo,
     file_changes: list[dict],
