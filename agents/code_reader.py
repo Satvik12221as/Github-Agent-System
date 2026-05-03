@@ -24,7 +24,7 @@ SKIP_FOLDERS = {
 
 def get_llm():
     return ChatGoogleGenerativeAI(
-        model="gemini-1.5-pro",  # safer default
+        model="gemini-2.5-pro",  # safer default
         google_api_key=os.getenv("GEMINI_API_KEY"),
         temperature=0.1
     )
