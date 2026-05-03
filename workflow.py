@@ -150,3 +150,32 @@ def run_workflow(issue_url: str) -> AgentState:
         f"{final_state.get('pr_url')}"
     )
     return final_state
+
+def stream_workflow(issue_url: str):
+    """
+    Generator that yields state updates from the workflow execution.
+    Used for Server-Sent Events (SSE) streaming.
+    """
+    from state import get_initial_state
+    import json
+    
+    logger.info(f"Starting streaming workflow for: {issue_url}")
+    initial_state = get_initial_state(issue_url)
+    app = build_workflow()
+
+    # Stream yields a tuple (node_name, state_update)
+    for output in app.stream(initial_state, config={"recursion_limit": 50}):
+        for node_name, state_update in output.items():
+            # Create a simplified event to send to the frontend
+            event_data = {
+                "node": node_name,
+                "steps": state_update.get("steps", 0),
+                "error": state_update.get("error"),
+                "pr_url": state_update.get("pr_url"),
+                "test_result": state_update.get("test_result"),
+                "retry_count": state_update.get("retry_count", 0),
+                "complexity": state_update.get("complexity", "unknown"),
+            }
+            # Yield as an SSE formatted string
+            yield f"data: {json.dumps(event_data)}\n\n"
+

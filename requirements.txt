@@ -1,29 +1,29 @@
 # LangGraph + LangChain core
-langgraph==0.2.28
-langchain==0.3.7
-langchain-core==0.3.15
-langchain-groq==0.2.0
+langgraph
+langchain
+langchain-core
+langchain-groq
 
 # GitHub API
-PyGithub==2.4.0
+PyGithub
 
 # Docker
-docker==7.1.0
+docker
 
 # Environment variables
-python-dotenv==1.0.1
+python-dotenv
 
 # Testing
-pytest==8.3.3
+pytest
 
 # Backend
-fastapi==0.115.0
-uvicorn==0.30.0
+fastapi
+uvicorn
 
 #LLM
-langchain-google-genai==2.1.4
+langchain-google-genai
 
 # Tracing & Formatting
-langsmith==0.1.137
-black==24.3.0
-flake8==7.0.0
+langsmith
+black
+flake8

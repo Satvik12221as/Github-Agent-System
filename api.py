@@ -5,7 +5,8 @@ import asyncio
 from concurrent.futures import ThreadPoolExecutor
 
 from typing import Optional
-from workflow import run_workflow
+from fastapi.responses import StreamingResponse
+from workflow import run_workflow, stream_workflow
 from state import validate_github_url
 from utils.logger import get_logger
 
@@ -93,3 +94,22 @@ async def fix_issue(request: FixRequest):
             status_code=500,
             detail=str(e)
         )
+
+@app.get("/stream_fix")
+async def stream_fix(issue_url: str):
+    """
+    Streaming endpoint. Takes a GitHub issue URL as a query param.
+    Returns Server-Sent Events (SSE) from the LangGraph execution.
+    """
+    logger.info(f"Stream fix request received: {issue_url}")
+
+    if not validate_github_url(issue_url):
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid GitHub issue URL."
+        )
+
+    return StreamingResponse(
+        stream_workflow(issue_url),
+        media_type="text/event-stream"
+    )
