@@ -22,9 +22,6 @@ pytest
 fastapi
 uvicorn
 
-#LLM
-langchain-google-genai
-
 # Tracing & Formatting
 langsmith
 black
