@@ -23,6 +23,7 @@ class AgentState(TypedDict):
 
     patch_confidence:      str    # high/medium/low from review
     last_review_feedback:  str    # feedback for retry prompt
+    token_usage: dict        # {'input_tokens': int, 'output_tokens': int}
 
 
 
@@ -58,4 +59,13 @@ def get_initial_state(issue_url: str) -> AgentState:
         steps=0,
         patch_confidence="",
         last_review_feedback="",
+        token_usage={"input_tokens": 0, "output_tokens": 0},
     )
+
+def update_token_usage(state: AgentState, response) -> None:
+    """
+    Extracts token usage from an LLM response and adds it to the state.
+    """
+    if hasattr(response, "usage_metadata") and response.usage_metadata:
+        state["token_usage"]["input_tokens"] += response.usage_metadata.get("input_tokens", 0)
+        state["token_usage"]["output_tokens"] += response.usage_metadata.get("output_tokens", 0)

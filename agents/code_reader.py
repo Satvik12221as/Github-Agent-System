@@ -6,7 +6,7 @@ from langchain_core.messages import HumanMessage
 from dotenv import load_dotenv
 from langchain_google_genai import ChatGoogleGenerativeAI
 import google.generativeai as genai
-from state import AgentState
+from state import AgentState, update_token_usage
 from utils.logger import get_logger
 
 load_dotenv()
@@ -24,7 +24,7 @@ SKIP_FOLDERS = {
 
 def get_llm():
     return ChatGoogleGenerativeAI(
-        model="gemini-2.5-pro",  # safer default
+        model="gemini-2.5-pro",  
         google_api_key=os.getenv("GEMINI_API_KEY"),
         temperature=0.1
     )
@@ -72,7 +72,8 @@ def fetch_issue_details(issue_url: str) -> dict:
 
 def get_relevant_extensions(
     issue_title: str,
-    issue_body: str
+    issue_body: str,
+    state: AgentState
 ) -> list[str]:
     """
     Step 1 — send only the issue to LLM.
@@ -107,6 +108,7 @@ Return ONLY the JSON array. No explanation. No markdown.
 
     llm = get_llm()
     response = llm.invoke([HumanMessage(content=prompt)])
+    update_token_usage(state, response)
     raw = clean_llm_output(response.content)
 
     try:
@@ -124,7 +126,8 @@ Return ONLY the JSON array. No explanation. No markdown.
 def get_relevant_files(
     issue_title: str,
     issue_body: str,
-    repo
+    repo,
+    state: AgentState
 ) -> list[str]:
     """
     Step 2 — use extensions from Step 1 to filter files.
@@ -135,7 +138,8 @@ def get_relevant_files(
     # Step 1 — ask LLM what extensions to look for.
     extensions = get_relevant_extensions(
         issue_title,
-        issue_body
+        issue_body,
+        state
     )
     extensions_tuple = tuple(extensions)
 
@@ -218,6 +222,7 @@ Return ONLY the JSON array. No explanation. No markdown.
 
     llm = get_llm()
     response = llm.invoke([HumanMessage(content=prompt)])
+    update_token_usage(state, response)
     raw = clean_llm_output(response.content)
 
     try:
@@ -272,7 +277,8 @@ def code_reader_agent(state: AgentState) -> AgentState:
         relevant_files = get_relevant_files(
             issue_data["title"],
             issue_data["body"],
-            repo
+            repo,
+            state
         )
 
         # STEP 4: Fetch contents of those files

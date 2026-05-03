@@ -5,7 +5,7 @@ from langchain_core.messages import HumanMessage
 from dotenv import load_dotenv
 from langchain_google_genai import ChatGoogleGenerativeAI
 import google.generativeai as genai
-from state import AgentState
+from state import AgentState, update_token_usage
 from utils.logger import get_logger
 
 load_dotenv()
@@ -32,7 +32,7 @@ def clean_llm_output(text: str) -> str:
     return text.strip()
 
 
-def build_plan(issue_title: str, issue_body: str, code_context: dict) -> dict:
+def build_plan(issue_title: str, issue_body: str, code_context: dict, state: AgentState) -> dict:
     """
     Deep root cause analysis.
     Does not just describe what to fix — identifies WHY the bug exists
@@ -106,6 +106,7 @@ Return ONLY the JSON. No explanation. No markdown.
 
     llm = get_llm()
     response = llm.invoke([HumanMessage(content=prompt)])
+    update_token_usage(state, response)
     raw = clean_llm_output(response.content)
 
     try:
@@ -147,7 +148,8 @@ def planner_agent(state: AgentState) -> AgentState:
         plan_data = build_plan(
             state["issue_title"],
             state["issue_body"],
-            state["code_context"]
+            state["code_context"],
+            state
         )
 
         # Format into a rich plan string that Code Writer reads

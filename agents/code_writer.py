@@ -9,7 +9,7 @@ from langchain_core.messages import HumanMessage
 from dotenv import load_dotenv
 from langchain_google_genai import ChatGoogleGenerativeAI
 import google.generativeai as genai
-from state import AgentState
+from state import AgentState, update_token_usage
 from utils.logger import get_logger
 
 
@@ -705,7 +705,8 @@ def run_existing_tests(
 def review_patch(
     plan: str,
     patch: str,
-    code_context: dict
+    code_context: dict,
+    state: AgentState
 ) -> dict:
     """
     Final gate. LLM reviews logic and completeness.
@@ -761,6 +762,7 @@ Return ONLY the JSON. No explanation. No markdown.
 
     llm      = get_llm()
     response = llm.invoke([HumanMessage(content=prompt)])
+    update_token_usage(state, response)
     raw      = clean_llm_output(response.content)
 
     try:
@@ -790,6 +792,7 @@ Return ONLY the JSON. No explanation. No markdown.
 def generate_patch(
     plan: str,
     code_context: dict,
+    state: AgentState,
     attempt: int = 1,
     feedback: str = ""
 ) -> str:
@@ -860,6 +863,7 @@ Return ONLY the unified diff. No explanation. No markdown.
 
     llm      = get_llm()
     response = llm.invoke([HumanMessage(content=prompt)])
+    update_token_usage(state, response)
     patch    = clean_llm_output(response.content)
 
     return patch
@@ -896,6 +900,7 @@ def code_writer_agent(state: AgentState) -> AgentState:
             patch = generate_patch(
                 state["plan"],
                 state["code_context"],
+                state,
                 attempt=attempt,
                 feedback=state.get("last_review_feedback", "")
             )
@@ -958,7 +963,8 @@ def code_writer_agent(state: AgentState) -> AgentState:
             review = review_patch(
                 state["plan"],
                 patch,
-                state["code_context"]
+                state["code_context"],
+                state
             )
             if not review.get("approved"):
                 state["last_review_feedback"] = (
