@@ -7,7 +7,8 @@ import tempfile
 from langchain_groq import ChatGroq
 from langchain_core.messages import HumanMessage
 from dotenv import load_dotenv
-
+from langchain_google_genai import ChatGoogleGenerativeAI
+import google.generativeai as genai
 from state import AgentState
 from utils.logger import get_logger
 
@@ -17,12 +18,11 @@ logger = get_logger(__name__)
 
 
 def get_llm():
-    return ChatGroq(
-        model="llama-3.3-70b-versatile",
-        api_key=os.getenv("GROQ_API_KEY"),
+    return ChatGoogleGenerativeAI(
+        model="gemini-1.5-pro",  # safer default
+        google_api_key=os.getenv("GEMINI_API_KEY"),
         temperature=0.1
     )
-
 
 def clean_llm_output(text: str) -> str:
     """Strip markdown fences from LLM output."""

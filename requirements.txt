@@ -3,6 +3,8 @@ langgraph
 langchain
 langchain-core
 langchain-groq
+google-generativeai
+langchain-google-genai
 
 # GitHub API
 PyGithub
