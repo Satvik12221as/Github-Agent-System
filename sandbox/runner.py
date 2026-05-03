@@ -271,7 +271,7 @@ def run_tests_in_docker(
         # IMPROVEMENT 1 - get image with retry
         image_name = ensure_image_available(client)
 
-        # Create container with reasonable resource limits
+        # Create container with reasonable resource limits and strict security
         container = client.containers.create(
             image=image_name,
             command="sleep infinity",
@@ -280,6 +280,9 @@ def run_tests_in_docker(
             mem_limit="512m",          # 512MB - enough for most repos
             cpu_period=100000,
             cpu_quota=75000,           # 75% of one CPU core
+            pids_limit=256,            # Prevent fork bombs
+            security_opt=["no-new-privileges"], # Prevent privilege escalation
+            cap_drop=["MKNOD", "NET_RAW", "SYS_ADMIN"], # Drop dangerous capabilities
         )
 
         logger.info(f"Container created: {container.short_id}")

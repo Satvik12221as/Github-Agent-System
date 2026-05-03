@@ -22,3 +22,8 @@ uvicorn==0.30.0
 
 #LLM
 langchain-google-genai==2.1.4
+
+# Tracing & Formatting
+langsmith==0.1.137
+black==24.3.0
+flake8==7.0.0

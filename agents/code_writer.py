@@ -78,18 +78,62 @@ def validate_patch(patch: str) -> bool:
 # LAYER 2 - MULTI-LANGUAGE SYNTAX VALIDATION
 def verify_syntax_python(content: str, filename: str) -> dict:
     """
-    Validates Python syntax using ast.parse().
-    No execution — purely structural check.
+    Validates Python syntax using ast.parse() and flake8.
+    Catches undefined names, syntax errors, and missing imports.
     """
+    # 1. AST structural check
     try:
         ast.parse(content)
-        return {"valid": True, "error": None}
     except SyntaxError as e:
         return {
             "valid": False,
             "error": f"Python SyntaxError in {filename} "
                      f"on line {e.lineno}: {e.msg}"
         }
+
+    # 2. Flake8 critical checks (undefined names, etc.)
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="w",
+            suffix=".py",
+            delete=False,
+            encoding="utf-8"
+        ) as tmp:
+            tmp.write(content)
+            tmp_path = tmp.name
+
+        # E9,F63,F7,F82 are critical errors: syntax errors, undefined names
+        result = subprocess.run(
+            ["flake8", "--select=E9,F63,F7,F82", tmp_path],
+            capture_output=True,
+            text=True,
+            timeout=10
+        )
+        os.unlink(tmp_path)
+
+        if result.returncode != 0:
+            error_output = result.stdout.strip() or result.stderr.strip()
+            # Clean up the tmp path from the error output so it doesn't confuse the LLM
+            error_output = error_output.replace(tmp_path, filename)
+            return {
+                "valid": False,
+                "error": f"Python Linting Error in {filename}:\n{error_output[:300]}"
+            }
+
+        return {"valid": True, "error": None}
+
+    except FileNotFoundError:
+        logger.warning("flake8 not installed. Skipping lint check.")
+        return {"valid": True, "error": None}
+    except Exception as e:
+        logger.warning(f"Python linting check failed: {e}")
+        return {"valid": True, "error": None}
+    finally:
+        try:
+            if 'tmp_path' in locals() and os.path.exists(tmp_path):
+                os.unlink(tmp_path)
+        except Exception:
+            pass
 
 
 def verify_syntax_javascript(content: str, filename: str) -> dict:
