@@ -554,9 +554,10 @@ def open_pull_request_agent(state: AgentState) -> AgentState:
             )
 
             if not prepared_changes:
-                logger.warning(
-                    "No changes could be prepared. "
-                    "Opening PR with empty branch."
+                raise Exception(
+                    "No valid changes could be prepared. "
+                    "The agent either hallucinated a file that does not exist, "
+                    "or the patch resulted in no differences. Cannot open an empty PR."
                 )
             else:
                 # Commit ALL prepared changes
