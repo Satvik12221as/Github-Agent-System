@@ -1,3 +1,4 @@
+# state.py
 from typing import TypedDict, Optional
 import re
 
@@ -26,8 +27,6 @@ class AgentState(TypedDict):
     token_usage: dict        # {'input_tokens': int, 'output_tokens': int}
 
 
-
-
 def validate_github_url(url: str) -> bool:
     """
     Checks if the URL looks like a real GitHub issue URL.
@@ -35,6 +34,7 @@ def validate_github_url(url: str) -> bool:
     """
     pattern = r"https://github\.com/[\w.-]+/[\w.-]+/issues/\d+"
     return bool(re.match(pattern, url))
+
 
 def get_initial_state(issue_url: str) -> AgentState:
     """Factory function — creates a clean starting state for any run."""
@@ -61,6 +61,7 @@ def get_initial_state(issue_url: str) -> AgentState:
         last_review_feedback="",
         token_usage={"input_tokens": 0, "output_tokens": 0},
     )
+
 
 def update_token_usage(state: AgentState, response) -> None:
     """

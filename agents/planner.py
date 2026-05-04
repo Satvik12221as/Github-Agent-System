@@ -1,3 +1,4 @@
+# planner.py
 import os
 import json
 from langchain_groq import ChatGroq
@@ -13,9 +14,9 @@ logger = get_logger(__name__)
 
 
 def get_llm():
-    return ChatGoogleGenerativeAI(
-        model="gemini-2.5-pro",  
-        google_api_key=os.getenv("GEMINI_API_KEY"),
+    return ChatGroq(
+        model="llama-3.3-70b-versatile", 
+        api_key=os.getenv("GROQ_API_KEY"),
         temperature=0.1
     )
 
@@ -136,6 +137,7 @@ Return ONLY the JSON. No explanation. No markdown.
             "risk":          "medium",
             "risk_reason":   "Unknown root cause"
         }
+
 
 def planner_agent(state: AgentState) -> AgentState:
     logger.info("=== Planner Agent starting ===")
