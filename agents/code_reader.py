@@ -1,4 +1,3 @@
-# code_reader.py
 import os
 import json
 from github import Github, Auth

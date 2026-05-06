@@ -1,4 +1,3 @@
-# code_writer.py
 import os
 import re
 import ast
