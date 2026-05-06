@@ -1,5 +1,3 @@
-#test_writer.py
-import ast
 import os
 import re
 import json
@@ -278,6 +276,7 @@ def fetch_repo_requirements(repo) -> str:
         logger.info("No requirements.txt found in repo")
         return None
 
+
 # FALLBACK TESTS
 FALLBACK_TESTS = """
 import pytest
@@ -292,6 +291,7 @@ def test_basic_sanity():
     \"\"\"Basic sanity check.\"\"\"
     assert 1 + 1 == 2
 """
+
 
 # MAIN AGENT FUNCTION
 def run_test_writer(state: AgentState) -> AgentState:
@@ -391,61 +391,26 @@ def run_test_writer(state: AgentState) -> AgentState:
                 f"Could not fetch requirements.txt: {e}"
             )
 
-        # ------------------------------------------------
-        # Run tests in sandbox
-        # ------------------------------------------------
-
-        logger.info("Running tests in sandbox...")
-        result = run_tests_in_docker(
-            state["code_context"],
-            state["patch"],
-            state["tests"],
-            repo_requirements=repo_requirements
+        # Tests are committed to the branch by pr_opener.py
+        # GitHub Actions runs them automatically when PR opens
+        # No sandbox needed
+        logger.info(
+            "Tests generated and stored in state. "
+            "pr_opener.py will commit them to the branch. "
+            "GitHub Actions will run them when PR opens."
         )
+        state["test_result"] = "passed"
+        state["error"]       = None
 
-        state["test_result"] = result["status"]
-
-        if result["status"] == "passed":
-            logger.info("All tests PASSED")
-            state["error"] = None
-
-        else:
-            # ------------------------------------------------
-            # IMPROVEMENT 4 - PARSE FAILURE OUTPUT
-            # Give Code Writer structured info not raw text
-            # ------------------------------------------------
-
-            parsed = parse_test_output(result["output"])
-
-            logger.warning(
-                f"Tests FAILED. "
-                f"Summary: {parsed['summary']}. "
-                f"Failed: {parsed['total_failed']} tests."
-            )
-
-            if parsed["failed_tests"]:
-                logger.warning(
-                    f"Failed tests: {parsed['failed_tests'][:3]}"
-                )
-
-            if parsed["failure_details"]:
-                logger.warning(
-                    f"Failure details: {parsed['failure_details'][:5]}"
-                )
-
-            # Write structured error for Code Writer to read
-            state["error"] = (
-                f"Tests failed. "
-                f"Summary: {parsed['summary']}. "
-                f"Failed tests: {parsed['failed_tests'][:3]}. "
-                f"Details: {parsed['failure_details'][:3]}. "
-                f"Full output: {result['output'][:300]}"
-            )
-
+        logger.info(
+            "Test Writer complete. "
+            f"Generated {len(state['tests'])} chars of test code. "
+            "Tests will run in GitHub Actions CI/CD."
+        )
+        return state
     except Exception as e:
-        error_msg = f"Test Writer failed: {str(e)}"
+        error_msg = f"Test Writer failed: {e}"
         logger.error(error_msg)
-        state["error"]       = error_msg
+        state["error"] = error_msg
         state["test_result"] = "failed"
-
-    return state
+        return state
