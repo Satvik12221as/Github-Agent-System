@@ -18,7 +18,7 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# Allowing the frontend to call this API
+# allowing the frontend to call this API
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
