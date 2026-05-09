@@ -18,8 +18,8 @@ def print_banner():
     print("   Autonomous Bug Fixing Pipeline")
     print("=" * 60)
 
-
-def print_run_summary(final_state: dict, duration: float):
+#summary of the run, showing all important fields from final state in a clean format
+def print_run_summary(final_state: dict, duration: float): 
     """
     Prints a clean summary of the entire run.
     Shows every important field from final state.
