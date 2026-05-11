@@ -3,7 +3,8 @@ import json
 from github import Github, Auth
 from langchain_core.messages import HumanMessage
 from dotenv import load_dotenv
-from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_groq import ChatGroq
+# from langchain_google_genai import ChatGoogleGenerativeAI
 from state import AgentState, update_token_usage
 from utils.logger import get_logger
 
@@ -19,13 +20,14 @@ SKIP_FOLDERS = {
     ".venv", "venv", "env"
 }
 
-
+# LLM SETUP
 def get_llm():
-    return ChatGoogleGenerativeAI(
-        model="gemini-2.5-pro",
-        google_api_key=os.getenv("GEMINI_API_KEY"),
+    return ChatGroq(
+        model="llama-3.3-70b-versatile", 
+        api_key=os.getenv("GROQ_API_KEY"),
         temperature=0.1
     )
+
 
 
 def get_github_client():
