@@ -20,7 +20,7 @@ SKIP_FOLDERS = {
     ".venv", "venv", "env"
 }
 
-# LLM SETUP
+# LLM setup
 def get_llm():
     return ChatGroq(
         model="llama-3.3-70b-versatile", 
