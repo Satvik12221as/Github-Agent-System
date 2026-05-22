@@ -113,3 +113,6 @@ async def stream_fix(issue_url: str):
         stream_workflow(issue_url),
         media_type="text/event-stream"
     )
+
+
+# Run the API with: uvicorn api:app --host
