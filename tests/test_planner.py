@@ -103,7 +103,7 @@ def test_plan_string_contains_summary():
     state["code_context"] = {"auth.py": "def login(): pass"}
 
     mock_plan = {
-        "summary": "Fix login validation for new users",
+        "fix_approach": "Fix login validation for new users",
         "steps": ["Find validation bug", "Fix condition", "Add test"],
         "affected_files": ["auth.py"],
         "complexity": "simple",
@@ -113,7 +113,7 @@ def test_plan_string_contains_summary():
     with patch("agents.planner.build_plan", return_value=mock_plan):
         updated_state = planner_agent(state)
 
-    # The plan string must contain the summary
+    # The plan string must contain the fix approach
     assert "Fix login validation for new users" in updated_state["plan"]
     # The plan string must contain step numbers
     assert "1." in updated_state["plan"]

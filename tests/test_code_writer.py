@@ -110,6 +110,12 @@ def test_code_writer_writes_patch_to_state():
     with patch(
         "agents.code_writer.generate_patch",
         return_value=valid_patch
+    ), patch(
+        "agents.code_writer.run_existing_tests",
+        return_value={"passed": True, "output": "1 passed", "summary": "1 passed"}
+    ), patch(
+        "agents.code_writer.review_patch",
+        return_value={"approved": True, "confidence": "high", "issues": [], "suggestion": ""}
     ):
         updated_state = code_writer_agent(state)
 
@@ -146,7 +152,9 @@ def test_code_writer_retries_on_invalid_patch():
         "https://github.com/user/repo/issues/1"
     )
     state["plan"] = "Fix the handler"
-    state["code_context"] = {"button.py": "def render(): pass"}
+    state["code_context"] = {
+        "button.py": "def render():\n    pass"
+    }
 
     invalid_patch = "this is not a valid patch at all"
     valid_patch = """--- a/button.py
@@ -161,6 +169,12 @@ def test_code_writer_retries_on_invalid_patch():
     with patch(
         "agents.code_writer.generate_patch",
         side_effect=[invalid_patch, valid_patch]
+    ), patch(
+        "agents.code_writer.run_existing_tests",
+        return_value={"passed": True, "output": "1 passed", "summary": "1 passed"}
+    ), patch(
+        "agents.code_writer.review_patch",
+        return_value={"approved": True, "confidence": "high", "issues": [], "suggestion": ""}
     ):
         updated_state = code_writer_agent(state)
 
@@ -185,6 +199,12 @@ def test_code_writer_increments_steps():
     with patch(
         "agents.code_writer.generate_patch",
         return_value=valid_patch
+    ), patch(
+        "agents.code_writer.run_existing_tests",
+        return_value={"passed": True, "output": "1 passed", "summary": "1 passed"}
+    ), patch(
+        "agents.code_writer.review_patch",
+        return_value={"approved": True, "confidence": "high", "issues": [], "suggestion": ""}
     ):
         updated_state = code_writer_agent(state)
 

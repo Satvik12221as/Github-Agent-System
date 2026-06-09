@@ -293,7 +293,7 @@ Closes #{issue_number}
 |-------|--------|
 | Format validation | ✅ Passed |
 | Syntax validation | ✅ Passed |
-| Existing tests | ✅ Passed |
+| Existing tests | {test_emoji} {state.get('test_result', 'Passed').capitalize()} |
 | LLM code review | ✅ Passed ({confidence_badge} confidence) |
 | Generated tests | ✅ Committed to branch |
 | CI/CD pipeline | 🔄 Check the Actions tab for live results |
