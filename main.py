@@ -172,4 +172,5 @@ if __name__ == "__main__":
     main()
 
 
-#.
+# To run this script, use the command line:
+# python main.py --issue
