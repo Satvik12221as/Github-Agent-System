@@ -173,4 +173,4 @@ if __name__ == "__main__":
 
 
 # To run this script, use the command line:
-# python main.py --issue, followed by the GitHub issue URL you want to fix. For example:.
+# python main.py --issue, followed by the GitHub issue URL you want to fix. For example:
